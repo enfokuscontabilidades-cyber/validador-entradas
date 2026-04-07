@@ -327,7 +327,7 @@ for (const item of result.c190) {
 result.docs = Array.from(docsAggMap.values()).map((doc) => ({
   ...doc,
   cfops: Array.from(new Set(doc.cfops)).join(", "),
-}));
+})); 
 
   return result;
 }
