@@ -299,6 +299,7 @@ for (const item of result.c190) {
 
   if (!docsAggMap.has(key)) {
     docsAggMap.set(key, {
+      indOper: item.indOper,
       numDoc: item.numDoc,
       dtDoc: item.dtDoc,
       codPart: item.codPart,
