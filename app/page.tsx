@@ -280,6 +280,7 @@ function parseSped(content: string) {
   const docsAggMap = new Map<
   string,
   {
+    indOper: string;
     numDoc: string;
     dtDoc: string;
     codPart: string;
