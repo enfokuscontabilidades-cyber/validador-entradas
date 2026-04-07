@@ -9,6 +9,9 @@ import {
   Building2,
   ArrowDownCircle,
   ArrowUpCircle,
+  ShoppingCart,
+  Package,
+  Boxes,
 } from "lucide-react";
 
 const money = new Intl.NumberFormat("pt-BR", {
@@ -28,19 +31,35 @@ function toNumber(v: any) {
   return Number(String(v).replace(",", "."));
 }
 
-function summarizeBy<T>(
-  items: T[],
-  keyFn: (item: T) => string,
-  valueFn: (item: T) => number
-) {
-  const map = new Map<string, number>();
+function docTypeFromCfop(cfop: string, indOper?: string) {
+  const prefix = (cfop || "")[0];
+  if (["1", "2", "3"].includes(prefix)) return "Entrada";
+  if (["5", "6", "7"].includes(prefix)) return "Saída";
+  if (indOper === "0") return "Entrada";
+  if (indOper === "1") return "Saída";
+  return "Não identificado";
+}
 
+function participantType(code: string) {
+  return code?.startsWith("CLI") ? "Cliente" : code?.startsWith("FOR") ? "Fornecedor" : "Participante";
+}
+
+function ufType(cfop: string) {
+  const prefix = (cfop || "")[0];
+  const second = (cfop || "")[1];
+  if (["5", "1"].includes(prefix)) return second === "1" ? "Interna" : second === "2" ? "Interestadual" : "Outra";
+  if (["6", "2"].includes(prefix)) return "Interestadual";
+  if (["7", "3"].includes(prefix)) return "Exterior";
+  return "Outra";
+}
+
+function summarizeBy<T>(items: T[], keyFn: (item: T) => string, valueFn: (item: T) => number) {
+  const map = new Map<string, number>();
   for (const item of items) {
     const key = keyFn(item) || "(vazio)";
     const value = valueFn(item);
     map.set(key, (map.get(key) || 0) + value);
   }
-
   return Array.from(map.entries())
     .map(([key, total]) => ({ key, total }))
     .sort((a, b) => b.total - a.total);
@@ -58,7 +77,8 @@ function parseSped(content: string) {
       uf: string;
       ie: string;
     };
-    participants: Record<string, string>;
+    participants: Record<string, { nome: string; cnpj: string; cpf: string; uf: string }>;
+    products: Record<string, { descricao: string; ncm: string }>;
     docs: Array<{
       indOper: string;
       codPart: string;
@@ -68,8 +88,28 @@ function parseSped(content: string) {
       base: number;
       icms: number;
       participante?: string;
+      docRole?: string;
       cfops?: string;
       tipo?: string;
+      ufOperacao?: string;
+    }>;
+    c170: Array<{
+      indOper: string;
+      codPart: string;
+      numDoc: string;
+      dtDoc: string;
+      participante: string;
+      docRole: string;
+      codItem: string;
+      descricao: string;
+      ncm: string;
+      cfop: string;
+      qtd: number;
+      vlItem: number;
+      vlBcIcms: number;
+      vlIcms: number;
+      tipo: string;
+      ufOperacao: string;
     }>;
     c190: Array<{
       indOper: string;
@@ -77,10 +117,13 @@ function parseSped(content: string) {
       dtDoc: string;
       codPart: string;
       participante: string;
+      docRole: string;
       cfop: string;
       vlOpr: number;
       base: number;
       icms: number;
+      tipo: string;
+      ufOperacao: string;
     }>;
     e110: null | {
       vlTotDebitos: number;
@@ -101,7 +144,9 @@ function parseSped(content: string) {
   } = {
     company: null,
     participants: {},
+    products: {},
     docs: [],
+    c170: [],
     c190: [],
     e110: null,
   };
@@ -134,37 +179,75 @@ function parseSped(content: string) {
     }
 
     if (reg === "0150") {
-      result.participants[row[1]] = row[2];
+      result.participants[row[1]] = {
+        nome: row[2],
+        cnpj: row[4],
+        cpf: row[5],
+        uf: row[8],
+      };
     }
 
-    if (reg === "C100") {
-      currentDoc = {
-        indOper: row[1],
-        codPart: row[3],
-        numDoc: row[7],
-        dtDoc: row[9],
-        vlDoc: toNumber(row[11]),
-        base: toNumber(row[21]),
-        icms: toNumber(row[22]),
-      };
+    if (reg === "0200") {
+  result.products[row[1]?.trim()] = {
+    descricao: row[2],
+    ncm: row[7] || "Sem NCM",
+  };
+}
 
-      result.docs.push(currentDoc);
+    if (reg === "C100") {
+  currentDoc = {
+    indOper: row[1],
+    codPart: row[3],
+    numDoc: row[7],
+    dtDoc: row[9],
+    vlDoc: toNumber(row[11]),
+    base: toNumber(row[20]),
+    icms: toNumber(row[21]),
+  };
+
+  result.docs.push(currentDoc);
+}
+
+    if (reg === "C170" && currentDoc) {
+      const participant = result.participants[currentDoc.codPart];
+      const product = result.products[row[2]];
+      const cfop = row[10];
+      result.c170.push({
+        indOper: currentDoc.indOper,
+        codPart: currentDoc.codPart,
+        numDoc: currentDoc.numDoc,
+        dtDoc: currentDoc.dtDoc,
+        participante: participant?.nome || currentDoc.codPart || "Sem participante",
+        docRole: participantType(currentDoc.codPart),
+        codItem: row[2],
+        descricao: product?.descricao || row[2],
+        ncm: product?.ncm || "Sem NCM",
+        cfop,
+        qtd: toNumber(row[4]),
+        vlItem: toNumber(row[6]),
+        vlBcIcms: toNumber(row[12]),
+        vlIcms: toNumber(row[14]),
+        tipo: docTypeFromCfop(cfop, currentDoc.indOper),
+        ufOperacao: ufType(cfop),
+      });
     }
 
     if (reg === "C190" && currentDoc) {
+      const participant = result.participants[currentDoc.codPart];
+      const cfop = row[2];
       result.c190.push({
         indOper: currentDoc.indOper,
         numDoc: currentDoc.numDoc,
         dtDoc: currentDoc.dtDoc,
         codPart: currentDoc.codPart,
-        participante:
-          result.participants[currentDoc.codPart] ||
-          currentDoc.codPart ||
-          "Sem participante",
-        cfop: row[2],
+        participante: participant?.nome || currentDoc.codPart || "Sem participante",
+        docRole: participantType(currentDoc.codPart),
+        cfop,
         vlOpr: toNumber(row[4]),
         base: toNumber(row[5]),
         icms: toNumber(row[6]),
+        tipo: docTypeFromCfop(cfop, currentDoc.indOper),
+        ufOperacao: ufType(cfop),
       });
     }
 
@@ -194,28 +277,55 @@ function parseSped(content: string) {
     docsCfopMap.get(item.numDoc)!.push(item.cfop);
   }
 
-  result.docs = result.docs.map((doc) => {
-    const cfops = docsCfopMap.get(doc.numDoc) || [];
-    const firstCfop = cfops[0] || "";
+  const docsAggMap = new Map<
+  string,
+  {
+    numDoc: string;
+    dtDoc: string;
+    codPart: string;
+    participante: string;
+    tipo: string;
+    ufOperacao: string;
+    cfops: string[];
+    vlDoc: number;
+    base: number;
+    icms: number;
+  }
+>();
 
-    const tipo = ["1", "2", "3"].includes(firstCfop[0])
-      ? "Entrada"
-      : ["5", "6", "7"].includes(firstCfop[0])
-      ? "Saída"
-      : doc.indOper === "0"
-      ? "Entrada"
-      : doc.indOper === "1"
-      ? "Saída"
-      : "Não identificado";
+for (const item of result.c190) {
+  const key = `${item.numDoc}|${item.dtDoc}|${item.indOper}`;
 
-    return {
-      ...doc,
-      participante:
-        result.participants[doc.codPart] || doc.codPart || "Sem participante",
-      cfops: cfops.join(", "),
-      tipo,
-    };
-  });
+  if (!docsAggMap.has(key)) {
+    docsAggMap.set(key, {
+      numDoc: item.numDoc,
+      dtDoc: item.dtDoc,
+      codPart: item.codPart,
+      participante: item.participante,
+      tipo: item.tipo,
+      ufOperacao: item.ufOperacao,
+      cfops: [],
+      vlDoc: 0,
+      base: 0,
+      icms: 0,
+    });
+  }
+
+  const current = docsAggMap.get(key)!;
+  current.cfops.push(item.cfop);
+  current.vlDoc += item.vlOpr;
+  current.base += item.base;
+  current.icms += item.icms;
+
+  if (current.ufOperacao !== item.ufOperacao) {
+    current.ufOperacao = "Mista";
+  }
+}
+
+result.docs = Array.from(docsAggMap.values()).map((doc) => ({
+  ...doc,
+  cfops: Array.from(new Set(doc.cfops)).join(", "),
+}));
 
   return result;
 }
@@ -244,42 +354,45 @@ function StatCard(props: {
   );
 }
 
-function SimpleTable(props: {
+function SummaryTable(props: {
   title: string;
-  rows: Array<{ key: string; total: number }>;
+  subtitle?: string;
+  columns: Array<{ key: string; label: string; render?: (value: any, row: any) => React.ReactNode }>;
+  rows: any[];
 }) {
-  const { title, rows } = props;
-
+  const { title, subtitle, columns, rows } = props;
   return (
     <div className="rounded-3xl border border-slate-200 bg-white shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
         <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
+        {subtitle ? <p className="mt-1 text-sm text-slate-500">{subtitle}</p> : null}
       </div>
-
-      {rows.length ? (
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-600">
-              <tr>
-                <th className="px-4 py-3 font-medium">CFOP</th>
-                <th className="px-4 py-3 font-medium">Valor total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, idx) => (
-                <tr key={`${row.key}-${idx}`} className="border-t border-slate-100">
-                  <td className="px-4 py-3 text-slate-800">{row.key}</td>
-                  <td className="px-4 py-3 text-slate-700">
-                    {money.format(row.total)}
-                  </td>
-                </tr>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-slate-50 text-left text-slate-600">
+            <tr>
+              {columns.map((col) => (
+                <th key={col.key} className="px-4 py-3 font-medium">{col.label}</th>
               ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="px-5 py-6 text-sm text-slate-500">Sem dados.</div>
-      )}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length ? rows.map((row, idx) => (
+              <tr key={idx} className="border-t border-slate-100">
+                {columns.map((col) => (
+                  <td key={col.key} className="px-4 py-3 text-slate-700">
+                    {col.render ? col.render(row[col.key], row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            )) : (
+              <tr>
+                <td colSpan={columns.length} className="px-4 py-6 text-sm text-slate-500">Sem dados.</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -294,6 +407,7 @@ function DocsTable(props: {
     icms: number;
     tipo: string;
     cfops: string;
+    ufOperacao?: string;
   }>;
 }) {
   const { rows } = props;
@@ -311,6 +425,7 @@ function DocsTable(props: {
               <th className="px-4 py-3 font-medium">Documento</th>
               <th className="px-4 py-3 font-medium">Participante</th>
               <th className="px-4 py-3 font-medium">CFOP</th>
+              <th className="px-4 py-3 font-medium">Operação</th>
               <th className="px-4 py-3 font-medium">Data</th>
               <th className="px-4 py-3 font-medium">Valor</th>
               <th className="px-4 py-3 font-medium">Base ICMS</th>
@@ -324,16 +439,11 @@ function DocsTable(props: {
                 <td className="px-4 py-3 text-slate-800">{row.numDoc}</td>
                 <td className="px-4 py-3 text-slate-700">{row.participante}</td>
                 <td className="px-4 py-3 text-slate-700">{row.cfops}</td>
+                <td className="px-4 py-3 text-slate-700">{row.ufOperacao || "-"}</td>
                 <td className="px-4 py-3 text-slate-700">{row.dtDoc}</td>
-                <td className="px-4 py-3 text-slate-700">
-                  {money.format(row.vlDoc)}
-                </td>
-                <td className="px-4 py-3 text-slate-700">
-                  {money.format(row.base)}
-                </td>
-                <td className="px-4 py-3 text-slate-700">
-                  {money.format(row.icms)}
-                </td>
+                <td className="px-4 py-3 text-slate-700">{money.format(row.vlDoc)}</td>
+                <td className="px-4 py-3 text-slate-700">{money.format(row.base)}</td>
+                <td className="px-4 py-3 text-slate-700">{money.format(row.icms)}</td>
               </tr>
             ))}
           </tbody>
@@ -348,11 +458,112 @@ export default function App() {
   const [fileName, setFileName] = useState("");
   const [search, setSearch] = useState("");
 
+  const analytics = useMemo(() => {
+    if (!data) return null;
+
+    const sales = data.c190.filter((i) => i.tipo === "Saída");
+    const purchases = data.c190.filter((i) => i.tipo === "Entrada");
+    const salesItems = data.c170.filter((i) => i.tipo === "Saída");
+    const purchaseItems = data.c170.filter((i) => i.tipo === "Entrada");
+
+    const byCustomer = Array.from(
+      sales.reduce((map, row) => {
+        const key = row.codPart;
+        if (!map.has(key)) {
+          map.set(key, {
+            participante: row.participante,
+            documentoTipo: row.docRole,
+            operacao: row.ufOperacao,
+            valor: 0,
+            base: 0,
+            icms: 0,
+          });
+        }
+        const current = map.get(key)!;
+        current.valor += row.vlOpr;
+        current.base += row.base;
+        current.icms += row.icms;
+        return map;
+      }, new Map<string, any>()).values()
+    ).sort((a, b) => b.valor - a.valor);
+
+    const bySupplier = Array.from(
+      purchases.reduce((map, row) => {
+        const key = row.codPart;
+        if (!map.has(key)) {
+          map.set(key, {
+            participante: row.participante,
+            documentoTipo: row.docRole,
+            operacao: row.ufOperacao,
+            valor: 0,
+            base: 0,
+            icms: 0,
+          });
+        }
+        const current = map.get(key)!;
+        current.valor += row.vlOpr;
+        current.base += row.base;
+        current.icms += row.icms;
+        return map;
+      }, new Map<string, any>()).values()
+    ).sort((a, b) => b.icms - a.icms);
+
+    const productsFlow = Array.from(
+      [...salesItems, ...purchaseItems].reduce((map, row) => {
+        const key = `${row.tipo}||${row.ncm}||${row.descricao}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            tipo: row.tipo,
+            ncm: row.ncm,
+            descricao: row.descricao,
+            valor: 0,
+            quantidade: 0,
+            base: 0,
+            icms: 0,
+          });
+        }
+        const current = map.get(key)!;
+        current.valor += row.vlItem;
+        current.quantidade += row.qtd;
+        current.base += row.vlBcIcms;
+        current.icms += row.vlIcms;
+        return map;
+      }, new Map<string, any>()).values()
+    ).sort((a, b) => b.valor - a.valor);
+
+    const purchasesByNcm = Array.from(
+      purchaseItems.reduce((map, row) => {
+        const key = `${row.ncm}||${row.descricao}`;
+        if (!map.has(key)) {
+          map.set(key, {
+            ncm: row.ncm,
+            descricao: row.descricao,
+            valor: 0,
+            icms: 0,
+          });
+        }
+        const current = map.get(key)!;
+        current.valor += row.vlItem;
+        current.icms += row.vlIcms;
+        return map;
+      }, new Map<string, any>()).values()
+    ).sort((a, b) => b.icms - a.icms);
+
+    return {
+      sales,
+      purchases,
+      byCustomer,
+      bySupplier,
+      productsFlow,
+      purchasesByNcm,
+    };
+  }, [data]);
+
   const resumo = useMemo(() => {
     if (!data) return null;
 
-    const entrada = data.c190.filter((i) => ["1", "2", "3"].includes(i.cfop?.[0]));
-    const saida = data.c190.filter((i) => ["5", "6", "7"].includes(i.cfop?.[0]));
+    const entrada = data.c190.filter((i) => i.tipo === "Entrada");
+    const saida = data.c190.filter((i) => i.tipo === "Saída");
 
     const soma = (arr: any[], field: string) =>
       arr.reduce((s, i) => s + (i[field] || 0), 0);
@@ -368,8 +579,6 @@ export default function App() {
         base: soma(saida, "base"),
         icms: soma(saida, "icms"),
       },
-      cfopEntrada: summarizeBy(entrada, (i) => i.cfop, (i) => i.vlOpr),
-      cfopSaida: summarizeBy(saida, (i) => i.cfop, (i) => i.vlOpr),
       e110: data.e110,
     };
   }, [data]);
@@ -380,7 +589,7 @@ export default function App() {
     if (!q) return data.docs;
 
     return data.docs.filter((doc) =>
-      [doc.numDoc, doc.participante, doc.dtDoc, doc.tipo, doc.cfops].some((v) =>
+      [doc.numDoc, doc.participante, doc.dtDoc, doc.tipo, doc.cfops, doc.ufOperacao].some((v) =>
         String(v || "").toLowerCase().includes(q)
       )
     );
@@ -399,13 +608,10 @@ export default function App() {
         <div className="rounded-[2rem] bg-gradient-to-r from-slate-900 to-slate-700 p-6 text-white shadow-xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-[0.2em] text-slate-300">
-                Análise tributária
-              </p>
+              <p className="text-sm uppercase tracking-[0.2em] text-slate-300">Análise tributária</p>
               <h1 className="mt-2 text-3xl font-semibold">Analisador SPED</h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-300">
-                Leitura do SPED Fiscal com separação entre entradas e saídas,
-                resumo por CFOP e apuração do ICMS pelo bloco E110.
+                Leitura do SPED Fiscal com foco em vendas por cliente, compras por fornecedor, produtos por NCM e apuração do ICMS pelo bloco E110.
               </p>
             </div>
 
@@ -431,44 +637,21 @@ export default function App() {
           ) : null}
         </div>
 
-        {!data || !resumo ? (
+        {!data || !resumo || !analytics ? (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
             <Upload className="mx-auto h-12 w-12 text-slate-400" />
-            <h2 className="mt-4 text-xl font-semibold text-slate-900">
-              Envie o arquivo TXT do SPED
-            </h2>
+            <h2 className="mt-4 text-xl font-semibold text-slate-900">Envie o arquivo TXT do SPED</h2>
             <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-500">
-              Após o envio, o sistema vai mostrar CFOP de entrada, CFOP de saída,
-              documentos classificados e dados do bloco E110.
+              Após o envio, o sistema vai mostrar vendas por cliente, compras por fornecedor, produtos vendidos e comprados por NCM e a apuração do ICMS.
             </p>
           </div>
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <StatCard
-                icon={Receipt}
-                title="Documentos"
-                value={number.format(data.docs.length)}
-                subtitle={`Registros C190: ${number.format(data.c190.length)}`}
-              />
-              <StatCard
-                icon={Users}
-                title="Participantes"
-                value={number.format(Object.keys(data.participants).length)}
-                subtitle={data.company?.nome || "Empresa não identificada"}
-              />
-              <StatCard
-                icon={ArrowDownCircle}
-                title="Entradas"
-                value={money.format(resumo.entrada.valor)}
-                subtitle={`ICMS: ${money.format(resumo.entrada.icms)}`}
-              />
-              <StatCard
-                icon={ArrowUpCircle}
-                title="Saídas"
-                value={money.format(resumo.saida.valor)}
-                subtitle={`ICMS: ${money.format(resumo.saida.icms)}`}
-              />
+              <StatCard icon={Receipt} title="Documentos" value={number.format(data.docs.length)} subtitle={`Itens C170: ${number.format(data.c170.length)}`} />
+              <StatCard icon={Users} title="Clientes com venda" value={number.format(analytics.byCustomer.length)} subtitle={analytics.byCustomer[0] ? `Maior cliente: ${analytics.byCustomer[0].participante}` : "Sem vendas"} />
+              <StatCard icon={ShoppingCart} title="Fornecedores" value={number.format(analytics.bySupplier.length)} subtitle={analytics.bySupplier[0] ? `Maior crédito: ${analytics.bySupplier[0].participante}` : "Sem compras"} />
+              <StatCard icon={Boxes} title="Produtos/NCM" value={number.format(analytics.productsFlow.length)} subtitle={data.company?.nome || "Empresa não identificada"} />
             </div>
 
             <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
@@ -480,46 +663,32 @@ export default function App() {
                 <div className="mt-4 grid gap-3 text-sm md:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <span className="text-slate-500">Nome:</span>
-                    <div className="font-medium text-slate-800">
-                      {data.company?.nome || "-"}
-                    </div>
+                    <div className="font-medium text-slate-800">{data.company?.nome || "-"}</div>
                   </div>
                   <div>
                     <span className="text-slate-500">CNPJ:</span>
-                    <div className="font-medium text-slate-800">
-                      {data.company?.cnpj || "-"}
-                    </div>
+                    <div className="font-medium text-slate-800">{data.company?.cnpj || "-"}</div>
                   </div>
                   <div>
                     <span className="text-slate-500">Período inicial:</span>
-                    <div className="font-medium text-slate-800">
-                      {data.company?.periodoInicial || "-"}
-                    </div>
+                    <div className="font-medium text-slate-800">{data.company?.periodoInicial || "-"}</div>
                   </div>
                   <div>
                     <span className="text-slate-500">Período final:</span>
-                    <div className="font-medium text-slate-800">
-                      {data.company?.periodoFinal || "-"}
-                    </div>
+                    <div className="font-medium text-slate-800">{data.company?.periodoFinal || "-"}</div>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Apuração do ICMS
-                </h2>
+                <h2 className="text-lg font-semibold text-slate-900">Apuração do ICMS</h2>
                 <div className="mt-4 grid gap-4 text-sm text-slate-600">
                   <div className="rounded-2xl bg-slate-50 p-4">
-                    <div className="font-medium text-slate-800">Leitura por CFOP</div>
-                    <div className="mt-1">
-                      Entradas: {money.format(resumo.entrada.valor)}
-                    </div>
+                    <div className="font-medium text-slate-800">Leitura por movimentação</div>
+                    <div className="mt-1">Entradas: {money.format(resumo.entrada.valor)}</div>
                     <div>Base entradas: {money.format(resumo.entrada.base)}</div>
                     <div>ICMS entradas: {money.format(resumo.entrada.icms)}</div>
-                    <div className="mt-3">
-                      Saídas: {money.format(resumo.saida.valor)}
-                    </div>
+                    <div className="mt-3">Saídas: {money.format(resumo.saida.valor)}</div>
                     <div>Base saídas: {money.format(resumo.saida.base)}</div>
                     <div>ICMS saídas: {money.format(resumo.saida.icms)}</div>
                   </div>
@@ -528,22 +697,11 @@ export default function App() {
                     <div className="font-medium text-slate-800">Bloco E110</div>
                     {resumo.e110 ? (
                       <>
-                        <div className="mt-1">
-                          Total débitos: {money.format(resumo.e110.vlTotDebitos)}
-                        </div>
-                        <div>
-                          Total créditos: {money.format(resumo.e110.vlTotCreditos)}
-                        </div>
-                        <div>
-                          Saldo apurado: {money.format(resumo.e110.vlSldApurado)}
-                        </div>
-                        <div>
-                          ICMS a recolher: {money.format(resumo.e110.vlIcmsRecolher)}
-                        </div>
-                        <div>
-                          Saldo credor a transportar:{" "}
-                          {money.format(resumo.e110.vlSldCredorTransportar)}
-                        </div>
+                        <div className="mt-1">Total débitos: {money.format(resumo.e110.vlTotDebitos)}</div>
+                        <div>Total créditos: {money.format(resumo.e110.vlTotCreditos)}</div>
+                        <div>Saldo apurado: {money.format(resumo.e110.vlSldApurado)}</div>
+                        <div>ICMS a recolher: {money.format(resumo.e110.vlIcmsRecolher)}</div>
+                        <div>Saldo credor a transportar: {money.format(resumo.e110.vlSldCredorTransportar)}</div>
                       </>
                     ) : (
                       <div className="mt-1">Bloco E110 não localizado no arquivo.</div>
@@ -554,15 +712,61 @@ export default function App() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-              <SimpleTable title="CFOP de entrada" rows={resumo.cfopEntrada} />
-              <SimpleTable title="CFOP de saída" rows={resumo.cfopSaida} />
+              <SummaryTable
+                title="Vendas por cliente"
+                subtitle="Mostra para quem o cliente mais vende, se é operação interna ou interestadual e o total movimentado."
+                columns={[
+                  { key: "participante", label: "Cliente" },
+                  { key: "documentoTipo", label: "Tipo cadastro" },
+                  { key: "operacao", label: "Operação" },
+                  { key: "valor", label: "Valor vendido", render: (v) => money.format(v) },
+                  { key: "icms", label: "ICMS", render: (v) => money.format(v) },
+                ]}
+                rows={analytics.byCustomer}
+              />
+
+              <SummaryTable
+                title="Compras por fornecedor"
+                subtitle="Mostra de quem o cliente mais compra e qual fornecedor gera mais crédito de ICMS."
+                columns={[
+                  { key: "participante", label: "Fornecedor" },
+                  { key: "documentoTipo", label: "Tipo cadastro" },
+                  { key: "operacao", label: "Operação" },
+                  { key: "valor", label: "Valor comprado", render: (v) => money.format(v) },
+                  { key: "icms", label: "Crédito de ICMS", render: (v) => money.format(v) },
+                ]}
+                rows={analytics.bySupplier}
+              />
             </div>
+
+            <SummaryTable
+              title="Produtos vendidos e comprados por NCM"
+              subtitle="Agrupamento por tipo da operação, NCM e descrição do produto."
+              columns={[
+                { key: "tipo", label: "Tipo" },
+                { key: "ncm", label: "NCM" },
+                { key: "descricao", label: "Descrição" },
+                { key: "quantidade", label: "Qtd", render: (v) => number.format(v) },
+                { key: "valor", label: "Valor", render: (v) => money.format(v) },
+                { key: "icms", label: "ICMS", render: (v) => money.format(v) },
+              ]}
+              rows={analytics.productsFlow}
+            />
+
+            <SummaryTable
+              title="NCMs que mais geram crédito de ICMS nas compras"
+              columns={[
+                { key: "ncm", label: "NCM" },
+                { key: "descricao", label: "Descrição" },
+                { key: "valor", label: "Valor comprado", render: (v) => money.format(v) },
+                { key: "icms", label: "Crédito de ICMS", render: (v) => money.format(v) },
+              ]}
+              rows={analytics.purchasesByNcm}
+            />
 
             <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">
-                  Documentos fiscais
-                </h2>
+                <h2 className="text-lg font-semibold text-slate-900">Documentos fiscais</h2>
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
