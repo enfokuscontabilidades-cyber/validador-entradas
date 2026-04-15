@@ -1187,455 +1187,293 @@ export default function ValidadorEntradasPage() {
     XLSX.writeFile(workbook, "relatorio-validacao-entradas.xlsx");
   }
 
+  const S = {
+    page: {
+      minHeight: "100vh",
+      background: "radial-gradient(circle at top left, rgba(39,199,216,0.08), transparent 24%), radial-gradient(circle at bottom right, rgba(127,221,228,0.06), transparent 22%), linear-gradient(180deg,#03111b 0%,#041827 55%,#03111b 100%)",
+      color: "#eef6fb",
+      padding: "28px 20px 48px",
+    } as React.CSSProperties,
+    inner: { position: "relative" as const, maxWidth: 1280, margin: "0 auto" },
+    card: {
+      borderRadius: 24,
+      background: "linear-gradient(180deg,rgba(9,35,52,0.9) 0%,rgba(6,23,36,0.95) 100%)",
+      border: "1px solid rgba(127,221,228,0.12)",
+      boxShadow: "0 16px 36px rgba(0,0,0,0.22),inset 0 1px 0 rgba(255,255,255,0.03)",
+    } as React.CSSProperties,
+    kicker: { color: "#8fe1e8", fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase" as const },
+    inputField: {
+      background: "rgba(255,255,255,0.06)",
+      border: "1px solid rgba(127,221,228,0.18)",
+      borderRadius: 12,
+      color: "#eef6fb",
+      padding: "8px 12px",
+      fontSize: 13,
+      outline: "none",
+      width: "100%",
+    } as React.CSSProperties,
+    btnPrimary: {
+      display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 14,
+      background: "linear-gradient(135deg,#27c7d8,#1aa8b8)", color: "#03111b",
+      fontWeight: 700, fontSize: 13, padding: "10px 18px", border: "none", cursor: "pointer",
+    } as React.CSSProperties,
+    btnGhost: {
+      display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 14,
+      background: "rgba(255,255,255,0.06)", border: "1px solid rgba(127,221,228,0.18)",
+      color: "#8fe1e8", fontWeight: 600, fontSize: 13, padding: "10px 18px", cursor: "pointer",
+    } as React.CSSProperties,
+    btnDanger: {
+      display: "inline-flex", alignItems: "center", gap: 8, borderRadius: 14,
+      background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)",
+      color: "#fca5a5", fontWeight: 600, fontSize: 13, padding: "10px 18px", cursor: "pointer",
+    } as React.CSSProperties,
+    statCard: {
+      borderRadius: 16, background: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(127,221,228,0.1)", padding: "16px 20px",
+    } as React.CSSProperties,
+    th: {
+      padding: "10px 12px", fontSize: 11, fontWeight: 700, letterSpacing: "0.06em",
+      textTransform: "uppercase" as const, color: "#8fe1e8", whiteSpace: "nowrap" as const,
+      background: "rgba(6,23,36,0.8)",
+    },
+    td: { padding: "10px 12px", fontSize: 12, verticalAlign: "top" as const, borderTop: "1px solid rgba(127,221,228,0.07)" },
+  };
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <main style={S.page}>
+      <div style={S.inner}>
+
+        {/* HEADER */}
+        <div style={{ ...S.card, padding: "24px 28px", marginBottom: 20 }}>
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 20, alignItems: "flex-start", justifyContent: "space-between" }}>
             <div>
-              <div className="mb-2 inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                Versão Beta 1.6
-              </div>
-              <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-                Validador Fiscal de Entradas
+              <span style={S.kicker}>Sistema · Validador Fiscal</span>
+              <h1 style={{ margin: "8px 0 6px", fontSize: "clamp(22px,3vw,30px)", fontWeight: 600, letterSpacing: -0.5, color: "#f4f8fb" }}>
+                Validador de Entradas
               </h1>
-              <p className="mt-2 max-w-3xl text-sm text-slate-600 sm:text-base">
-                Importe o arquivo SPED Fiscal e analise os alertas agrupados por
-                nota fiscal. Ao abrir a nota, você verá os itens vinculados a ela.
+              <p style={{ margin: 0, fontSize: 13, color: "#8fe1e8", maxWidth: 560, lineHeight: 1.6 }}>
+                Importe o arquivo SPED Fiscal e analise os alertas agrupados por nota fiscal.
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-medium text-white shadow-sm transition hover:opacity-90">
-                <Upload className="h-4 w-4" />
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10, alignItems: "center" }}>
+              <label style={{ ...S.btnPrimary, cursor: "pointer" }}>
+                <Upload size={15} />
                 Upload do SPED
-                <input
-                  ref={inputRef}
-                  type="file"
-                  accept=".txt"
-                  className="hidden"
-                  onChange={importarArquivoSped}
-                />
+                <input ref={inputRef} type="file" accept=".txt" style={{ display: "none" }} onChange={importarArquivoSped} />
               </label>
-
-              <button
-                type="button"
-                onClick={exportarRelatorio}
-                disabled={!notasFiltradas.length}
-                className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Download className="h-4 w-4" />
-                Exportar relatório
+              <button type="button" onClick={exportarRelatorio} disabled={!notasFiltradas.length}
+                style={{ ...S.btnGhost, opacity: notasFiltradas.length ? 1 : 0.4, cursor: notasFiltradas.length ? "pointer" : "not-allowed" }}>
+                <Download size={15} />Exportar relatório
               </button>
-
-              <button
-                type="button"
-                onClick={limparTudo}
-                className="inline-flex items-center gap-2 rounded-2xl border border-red-200 bg-white px-4 py-3 text-sm font-medium text-red-600 shadow-sm transition hover:bg-red-50"
-              >
-                <Trash2 className="h-4 w-4" />
-                Limpar
+              <button type="button" onClick={limparTudo} style={S.btnDanger}>
+                <Trash2 size={15} />Limpar
               </button>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm text-slate-500">Total de notas</p>
-              <p className="mt-1 text-2xl font-bold">{resumo.totalNotas}</p>
-              <p className="mt-2 text-xs text-slate-500">
-                Itens: {resumo.totalItens}
-              </p>
+          {/* STATS */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginTop: 20 }}>
+            <div style={S.statCard}>
+              <div style={{ fontSize: 11, color: "#8fe1e8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Total de notas</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: "#f4f8fb" }}>{resumo.totalNotas}</div>
+              <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginTop: 2 }}>Itens: {resumo.totalItens}</div>
             </div>
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-sm text-emerald-700">Notas OK</p>
-              <p className="mt-1 text-2xl font-bold text-emerald-700">
-                {resumo.notasOk}
-              </p>
-              <p className="mt-2 text-xs text-emerald-700/80">
-                Itens OK: {resumo.itensOk}
-              </p>
+            <div style={{ ...S.statCard, border: "1px solid rgba(34,197,94,0.2)", background: "rgba(34,197,94,0.06)" }}>
+              <div style={{ fontSize: 11, color: "#86efac", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Notas OK</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: "#86efac" }}>{resumo.notasOk}</div>
+              <div style={{ fontSize: 11, color: "rgba(134,239,172,0.6)", marginTop: 2 }}>Itens OK: {resumo.itensOk}</div>
             </div>
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-sm text-amber-700">Notas com alerta</p>
-              <p className="mt-1 text-2xl font-bold text-amber-700">
-                {resumo.notasComAlerta}
-              </p>
-              <p className="mt-2 text-xs text-amber-700/80">
-                Itens com alerta: {resumo.itensComAlerta}
-              </p>
+            <div style={{ ...S.statCard, border: "1px solid rgba(251,191,36,0.2)", background: "rgba(251,191,36,0.06)" }}>
+              <div style={{ fontSize: 11, color: "#fcd34d", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>Notas com alerta</div>
+              <div style={{ fontSize: 26, fontWeight: 700, color: "#fcd34d" }}>{resumo.notasComAlerta}</div>
+              <div style={{ fontSize: 11, color: "rgba(252,211,77,0.6)", marginTop: 2 }}>Itens com alerta: {resumo.itensComAlerta}</div>
             </div>
           </div>
 
           {nomeArquivo && (
-            <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              <FileText className="h-4 w-4" />
-              Arquivo carregado:{" "}
-              <span className="font-semibold text-slate-800">{nomeArquivo}</span>
+            <div style={{ marginTop: 14, display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12, color: "#8fe1e8", background: "rgba(39,199,216,0.07)", border: "1px solid rgba(39,199,216,0.15)", borderRadius: 10, padding: "6px 12px" }}>
+              <FileText size={13} />
+              Arquivo: <strong style={{ color: "#eef6fb" }}>{nomeArquivo}</strong>
             </div>
           )}
 
           {dadosEmpresa && (
-            <div className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="flex items-start gap-2">
-                <Building2 className="mt-0.5 h-4 w-4 text-slate-500" />
+            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, background: "rgba(39,199,216,0.04)", border: "1px solid rgba(127,221,228,0.1)", borderRadius: 16, padding: "14px 18px" }}>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
+                <Building2 size={14} style={{ color: "#8fe1e8", marginTop: 2, flexShrink: 0 }} />
                 <div>
-                  <p className="text-xs font-medium text-slate-500">Empresa</p>
-                  <p className="text-sm font-semibold text-slate-800">
-                    {dadosEmpresa.nome || "-"}
-                  </p>
+                  <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginBottom: 2 }}>Empresa</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#f4f8fb" }}>{dadosEmpresa.nome || "-"}</div>
                 </div>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">CNPJ</p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {dadosEmpresa.cnpj
-                    ? formatarCNPJ(dadosEmpresa.cnpj)
-                    : "-"}
-                </p>
+                <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginBottom: 2 }}>CNPJ</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#f4f8fb" }}>{dadosEmpresa.cnpj ? formatarCNPJ(dadosEmpresa.cnpj) : "-"}</div>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">
-                  Inscrição Estadual
-                </p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {dadosEmpresa.ie || "-"}
-                </p>
+                <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginBottom: 2 }}>Inscrição Estadual</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#f4f8fb" }}>{dadosEmpresa.ie || "-"}</div>
               </div>
               <div>
-                <p className="text-xs font-medium text-slate-500">UF</p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {dadosEmpresa.uf || "-"}
-                </p>
+                <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginBottom: 2 }}>UF</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#f4f8fb" }}>{dadosEmpresa.uf || "-"}</div>
               </div>
-              <div className="md:col-span-2">
-                <p className="text-xs font-medium text-slate-500">
-                  Período do arquivo
-                </p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {dadosEmpresa.periodoInicial || "-"} até{" "}
-                  {dadosEmpresa.periodoFinal || "-"}
-                </p>
+              <div style={{ gridColumn: "span 2" }}>
+                <div style={{ fontSize: 11, color: "rgba(143,225,232,0.6)", marginBottom: 2 }}>Período do arquivo</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "#f4f8fb" }}>{dadosEmpresa.periodoInicial || "-"} até {dadosEmpresa.periodoFinal || "-"}</div>
               </div>
             </div>
           )}
 
           {erroImportacao && (
-            <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div style={{ marginTop: 14, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)", borderRadius: 12, padding: "10px 16px", fontSize: 13, color: "#fca5a5" }}>
               {erroImportacao}
             </div>
           )}
         </div>
 
-        <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-          <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="flex flex-col gap-2 text-sm xl:col-span-2">
-              <span className="font-medium text-slate-700">
-                Perfil da empresa para leitura das palavras-chave
-              </span>
-              <select
-                value={perfilEmpresa}
-                onChange={(e) => alterarPerfilEmpresa(e.target.value as PerfilEmpresa)}
-                className="rounded-2xl border border-slate-300 bg-white px-3 py-2.5 outline-none transition focus:border-slate-500"
-              >
+        {/* FILTERS */}
+        <div style={{ ...S.card, padding: "20px 24px", marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 18 }}>
+            <label style={{ display: "flex", flexDirection: "column" as const, gap: 6, fontSize: 12, fontWeight: 600, color: "#8fe1e8" }}>
+              Perfil da empresa
+              <select value={perfilEmpresa} onChange={(e) => alterarPerfilEmpresa(e.target.value as PerfilEmpresa)} style={S.inputField}>
                 {Object.entries(PERFIS_EMPRESA_LABEL).map(([valor, label]) => (
-                  <option key={valor} value={valor}>
-                    {label}
-                  </option>
+                  <option key={valor} value={valor} style={{ background: "#03111b" }}>{label}</option>
                 ))}
               </select>
             </label>
-
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 xl:col-span-2">
-              A visão principal está agrupada por <strong>nota fiscal</strong>. Os{" "}
-              <strong>alertas e sugestões</strong> são consolidados por nota, e os
-              itens aparecem apenas ao abrir cada nota.
+            <div style={{ display: "flex", alignItems: "center", fontSize: 12, color: "rgba(143,225,232,0.7)", background: "rgba(39,199,216,0.04)", border: "1px solid rgba(127,221,228,0.1)", borderRadius: 12, padding: "10px 14px", lineHeight: 1.6 }}>
+              Agrupado por <strong style={{ color: "#8fe1e8", margin: "0 4px" }}>nota fiscal</strong>. Alertas consolidados por nota — itens ao abrir cada linha.
             </div>
           </div>
-
-          <div className="mb-4 flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-500" />
-            <h2 className="text-lg font-semibold">Filtros</h2>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, color: "#8fe1e8", fontWeight: 600, fontSize: 13 }}>
+            <Filter size={14} />Filtros
           </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium text-slate-700">Buscar</span>
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-300 px-3 py-2">
-                <Search className="h-4 w-4 text-slate-400" />
-                <input
-                  value={filtros.busca}
-                  onChange={(e) =>
-                    setFiltros((f) => ({ ...f, busca: e.target.value }))
-                  }
-                  placeholder="Nota, fornecedor, descrição..."
-                  className="w-full bg-transparent text-sm outline-none"
-                />
-              </div>
-            </label>
-
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium text-slate-700">CFOP</span>
-              <input
-                value={filtros.cfop}
-                onChange={(e) =>
-                  setFiltros((f) => ({ ...f, cfop: e.target.value }))
-                }
-                placeholder="Ex.: 1556"
-                className="rounded-2xl border border-slate-300 px-3 py-2 outline-none transition focus:border-slate-500"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2 text-sm">
-              <span className="font-medium text-slate-700">NCM</span>
-              <input
-                value={filtros.ncm}
-                onChange={(e) =>
-                  setFiltros((f) => ({ ...f, ncm: e.target.value }))
-                }
-                placeholder="Ex.: 8471"
-                className="rounded-2xl border border-slate-300 px-3 py-2 outline-none transition focus:border-slate-500"
-              />
-            </label>
-
-            <label className="flex items-end">
-              <div className="flex w-full items-center gap-3 rounded-2xl border border-slate-300 px-4 py-3">
-                <input
-                  id="somente-alertas"
-                  type="checkbox"
-                  checked={filtros.somenteAlertas}
-                  onChange={(e) =>
-                    setFiltros((f) => ({
-                      ...f,
-                      somenteAlertas: e.target.checked,
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-slate-300"
-                />
-                <label
-                  htmlFor="somente-alertas"
-                  className="text-sm font-medium text-slate-700"
-                >
-                  Mostrar apenas alertas
-                </label>
-              </div>
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 12 }}>
+            <div style={{ position: "relative" as const }}>
+              <Search size={13} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#8fe1e8", opacity: 0.6 }} />
+              <input value={filtros.busca} onChange={(e) => setFiltros((f) => ({ ...f, busca: e.target.value }))}
+                placeholder="Nota, fornecedor, descrição..." style={{ ...S.inputField, paddingLeft: 30 }} />
+            </div>
+            <input value={filtros.cfop} onChange={(e) => setFiltros((f) => ({ ...f, cfop: e.target.value }))} placeholder="CFOP (ex: 1556)" style={S.inputField} />
+            <input value={filtros.ncm} onChange={(e) => setFiltros((f) => ({ ...f, ncm: e.target.value }))} placeholder="NCM (ex: 8471)" style={S.inputField} />
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "#8fe1e8", cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(127,221,228,0.14)", borderRadius: 12, padding: "8px 12px" }}>
+              <input type="checkbox" checked={filtros.somenteAlertas} onChange={(e) => setFiltros((f) => ({ ...f, somenteAlertas: e.target.checked }))} style={{ accentColor: "#27c7d8" }} />
+              Só alertas
             </label>
           </div>
-        </section>
+        </div>
 
-        <section className="overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse text-left text-sm">
-              <thead className="bg-slate-100 text-slate-700">
+        {/* TABLE */}
+        <div style={{ ...S.card, overflow: "hidden" }}>
+          <div style={{ overflowX: "auto" as const }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 12 }}>
+              <thead>
                 <tr>
-                  <th className="px-3 py-3 font-semibold">Nota</th>
-                  <th className="px-3 py-3 font-semibold">Fornecedor</th>
-                  <th className="px-3 py-3 font-semibold">Qtd. itens</th>
-                  <th className="px-3 py-3 font-semibold">Valor contábil</th>
-                  <th className="px-3 py-3 font-semibold">Base ICMS</th>
-                  <th className="px-3 py-3 font-semibold">Valor ICMS</th>
-                  <th className="px-3 py-3 font-semibold">Sugestões da nota</th>
-                  <th className="px-3 py-3 font-semibold">Alertas da nota</th>
-                  <th className="px-3 py-3 font-semibold">Status</th>
+                  <th style={S.th}>Nota</th>
+                  <th style={S.th}>Fornecedor</th>
+                  <th style={S.th}>Itens</th>
+                  <th style={S.th}>Valor contábil</th>
+                  <th style={S.th}>Base ICMS</th>
+                  <th style={S.th}>Valor ICMS</th>
+                  <th style={S.th}>Sugestões</th>
+                  <th style={S.th}>Alertas</th>
+                  <th style={S.th}>Status</th>
                 </tr>
               </thead>
               <tbody>
                 {!notasFiltradas.length ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-14 text-center text-slate-500">
+                    <td colSpan={9} style={{ padding: "56px 20px", textAlign: "center", color: "rgba(143,225,232,0.5)", fontSize: 14 }}>
                       Importe um arquivo SPED para começar a análise.
                     </td>
                   </tr>
                 ) : (
                   notasFiltradas.map((nota) => {
                     const notaOk = nota.status === "OK";
+                    const rowBg = notaOk ? "rgba(34,197,94,0.04)" : "rgba(251,191,36,0.05)";
                     return (
                       <React.Fragment key={nota.chave}>
-                        <tr
-                          className={
-                            notaOk
-                              ? "border-t border-slate-200 bg-emerald-50/30"
-                              : "border-t border-slate-200 bg-amber-50/40"
-                          }
-                        >
-                          <td className="px-3 py-3 align-top text-xs font-semibold">
-                            {nota.numero_nota || "-"}
-                          </td>
-                          <td className="max-w-[260px] px-3 py-3 align-top text-xs leading-5">
-                            {nota.fornecedor || "-"}
-                          </td>
-                          <td className="px-3 py-3 align-top text-xs">
-                            {nota.total_itens}
-                          </td>
-                          <td className="px-3 py-3 align-top text-xs">
-                            {formatarMoeda(nota.total_contabil)}
-                          </td>
-                          <td className="px-3 py-3 align-top text-xs">
-                            {formatarMoeda(nota.total_base_icms)}
-                          </td>
-                          <td className="px-3 py-3 align-top text-xs">
-                            {formatarMoeda(nota.total_valor_icms)}
-                          </td>
-                          <td className="px-3 py-3 align-top">
+                        <tr style={{ background: rowBg }}>
+                          <td style={{ ...S.td, fontWeight: 700, color: "#f4f8fb" }}>{nota.numero_nota || "-"}</td>
+                          <td style={{ ...S.td, maxWidth: 240, lineHeight: 1.5 }}>{nota.fornecedor || "-"}</td>
+                          <td style={{ ...S.td, textAlign: "center" as const }}>{nota.total_itens}</td>
+                          <td style={S.td}>{formatarMoeda(nota.total_contabil)}</td>
+                          <td style={S.td}>{formatarMoeda(nota.total_base_icms)}</td>
+                          <td style={S.td}>{formatarMoeda(nota.total_valor_icms)}</td>
+                          <td style={S.td}>
                             {nota.sugestoes.length ? (
-                              <div className="flex flex-col gap-1.5">
+                              <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
                                 {nota.sugestoes.map((sugestao, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex w-fit rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
-                                  >
-                                    {sugestao}
-                                  </span>
+                                  <span key={index} style={{ display: "inline-block", background: "rgba(39,199,216,0.1)", border: "1px solid rgba(39,199,216,0.2)", borderRadius: 20, padding: "2px 10px", fontSize: 11, color: "#8fe1e8", whiteSpace: "nowrap" as const }}>{sugestao}</span>
                                 ))}
                               </div>
-                            ) : (
-                              <span className="text-xs text-slate-500">
-                                Sem sugestão
-                              </span>
-                            )}
+                            ) : <span style={{ color: "rgba(143,225,232,0.4)", fontSize: 11 }}>—</span>}
                           </td>
-                          <td className="px-3 py-3 align-top">
+                          <td style={S.td}>
                             {nota.avisos.length ? (
-                              <div className="flex flex-col gap-1.5">
+                              <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
                                 {nota.avisos.map((aviso, index) => (
-                                  <span
-                                    key={index}
-                                    className="inline-flex w-fit rounded-full bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 ring-1 ring-slate-200"
-                                  >
-                                    {aviso}
-                                  </span>
+                                  <span key={index} style={{ display: "inline-block", background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.18)", borderRadius: 20, padding: "2px 10px", fontSize: 11, color: "#fcd34d", whiteSpace: "nowrap" as const }}>{aviso}</span>
                                 ))}
                               </div>
-                            ) : (
-                              <span className="text-xs text-slate-500">
-                                Sem alerta
-                              </span>
-                            )}
+                            ) : <span style={{ color: "rgba(143,225,232,0.4)", fontSize: 11 }}>—</span>}
                           </td>
-                          <td className="px-3 py-3 align-top">
-                            <span
-                              className={
-                                notaOk
-                                  ? "inline-flex items-center gap-2 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700"
-                                  : "inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700"
-                              }
-                            >
-                              {notaOk ? (
-                                <CheckCircle2 className="h-3.5 w-3.5" />
-                              ) : (
-                                <AlertTriangle className="h-3.5 w-3.5" />
-                              )}
+                          <td style={S.td}>
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 5, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700, background: notaOk ? "rgba(34,197,94,0.12)" : "rgba(251,191,36,0.12)", border: notaOk ? "1px solid rgba(34,197,94,0.3)" : "1px solid rgba(251,191,36,0.3)", color: notaOk ? "#86efac" : "#fcd34d", whiteSpace: "nowrap" as const }}>
+                              {notaOk ? <CheckCircle2 size={11} /> : <AlertTriangle size={11} />}
                               {nota.status}
                             </span>
                           </td>
                         </tr>
-                        <tr className="border-t border-slate-100 bg-white">
-                          <td colSpan={9} className="px-3 py-3">
-                            <details className="rounded-xl bg-slate-50 px-3 py-2 ring-1 ring-slate-200">
-                              <summary className="cursor-pointer text-xs font-medium text-slate-700">
-                                Abrir itens da nota
+                        <tr style={{ background: "rgba(6,23,36,0.5)" }}>
+                          <td colSpan={9} style={{ padding: "6px 12px 10px", borderTop: "1px solid rgba(127,221,232,0.05)" }}>
+                            <details style={{ borderRadius: 12, background: "rgba(39,199,216,0.04)", border: "1px solid rgba(127,221,228,0.1)", padding: "6px 12px" }}>
+                              <summary style={{ cursor: "pointer", fontSize: 11, fontWeight: 600, color: "#8fe1e8", letterSpacing: "0.04em", userSelect: "none" as const }}>
+                                Ver itens da nota ({nota.total_itens})
                               </summary>
-                              <div className="mt-4 overflow-x-auto">
-                                <table className="min-w-full border-collapse text-left text-xs">
+                              <div style={{ marginTop: 10, overflowX: "auto" as const }}>
+                                <table style={{ width: "100%", borderCollapse: "collapse" as const, fontSize: 11 }}>
                                   <thead>
-                                    <tr className="border-b border-slate-200 text-slate-600">
-                                      <th className="px-2 py-2 font-semibold">Código</th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Descrição do produto
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Valor do item
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        CST ICMS
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">CFOP</th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Base ICMS
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Alíquota ICMS
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Valor ICMS
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">NCM</th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Sugestão do item
-                                      </th>
-                                      <th className="px-2 py-2 font-semibold">
-                                        Avisos do item
-                                      </th>
+                                    <tr style={{ borderBottom: "1px solid rgba(127,221,228,0.12)" }}>
+                                      {["Código","Descrição","Valor","CST ICMS","CFOP","Base ICMS","Alíq. ICMS","Valor ICMS","NCM","Sugestão","Avisos"].map((h) => (
+                                        <th key={h} style={{ padding: "6px 8px", fontWeight: 700, color: "rgba(143,225,232,0.7)", textAlign: "left", whiteSpace: "nowrap" as const }}>{h}</th>
+                                      ))}
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {nota.itens.map((linha) => (
-                                      <tr
-                                        key={linha.id}
-                                        className="border-t border-slate-100 align-top"
-                                      >
-                                        <td className="px-2 py-2">
-                                          {linha.codigo_produto || "-"}
-                                        </td>
-                                        <td className="max-w-[260px] px-2 py-2 leading-5">
-                                          {linha.descricao || "-"}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {formatarMoeda(linha.valor_contabil)}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {linha.cst_icms || "-"}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {linha.cfop || "-"}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {formatarMoeda(linha.base_icms)}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {formatarPercentual(linha.aliquota_icms)}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {formatarMoeda(linha.valor_icms)}
-                                        </td>
-                                        <td className="px-2 py-2">
-                                          {linha.ncm || "-"}
-                                        </td>
-                                        <td className="px-2 py-2">
+                                      <tr key={linha.id} style={{ borderTop: "1px solid rgba(127,221,228,0.05)", verticalAlign: "top" }}>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{linha.codigo_produto || "-"}</td>
+                                        <td style={{ padding: "6px 8px", maxWidth: 240, lineHeight: 1.5, color: "#eef6fb" }}>{linha.descricao || "-"}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{formatarMoeda(linha.valor_contabil)}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{linha.cst_icms || "-"}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{linha.cfop || "-"}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{formatarMoeda(linha.base_icms)}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{formatarPercentual(linha.aliquota_icms)}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{formatarMoeda(linha.valor_icms)}</td>
+                                        <td style={{ padding: "6px 8px", color: "#eef6fb" }}>{linha.ncm || "-"}</td>
+                                        <td style={{ padding: "6px 8px" }}>
                                           {linha.sugestao.tipo ? (
-                                            <div className="rounded-lg bg-slate-100 px-2 py-1.5 text-[11px] leading-5 text-slate-700 ring-1 ring-slate-200">
-                                              <div className="font-semibold text-slate-800">
-                                                {linha.sugestao.tipo ===
-                                                "uso_consumo"
-                                                  ? "Possível uso e consumo"
-                                                  : linha.sugestao.tipo ===
-                                                    "imobilizado"
-                                                  ? "Possível imobilizado"
-                                                  : "Possível combustível"}
+                                            <div style={{ background: "rgba(39,199,216,0.08)", border: "1px solid rgba(39,199,216,0.16)", borderRadius: 8, padding: "6px 8px", lineHeight: 1.5 }}>
+                                              <div style={{ fontWeight: 700, color: "#8fe1e8" }}>
+                                                {linha.sugestao.tipo === "uso_consumo" ? "Possível uso e consumo" : linha.sugestao.tipo === "imobilizado" ? "Possível imobilizado" : "Possível combustível"}
                                               </div>
-                                              <div>{linha.sugestao.motivo}</div>
-                                              <div className="mt-1 text-[10px] uppercase tracking-wide text-slate-500">
-                                                Confiança{" "}
-                                                {linha.sugestao.confianca || "-"}
-                                              </div>
+                                              <div style={{ color: "rgba(143,225,232,0.8)", marginTop: 2 }}>{linha.sugestao.motivo}</div>
+                                              <div style={{ marginTop: 4, fontSize: 10, textTransform: "uppercase" as const, letterSpacing: "0.05em", color: "rgba(143,225,232,0.5)" }}>Confiança {linha.sugestao.confianca || "-"}</div>
                                             </div>
-                                          ) : (
-                                            <span className="text-slate-500">
-                                              Sem sugestão
-                                            </span>
-                                          )}
+                                          ) : <span style={{ color: "rgba(143,225,232,0.35)" }}>—</span>}
                                         </td>
-                                        <td className="min-w-[220px] px-2 py-2">
-                                          <ul className="space-y-1.5">
+                                        <td style={{ padding: "6px 8px", minWidth: 200 }}>
+                                          <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
                                             {linha.avisos.map((aviso, index) => (
-                                              <li
-                                                key={index}
-                                                className="rounded-lg bg-white px-2 py-1.5 text-[11px] leading-5 ring-1 ring-slate-200"
-                                              >
+                                              <span key={index} style={{ display: "inline-block", background: "rgba(251,191,36,0.07)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 6, padding: "3px 8px", color: "#fcd34d", lineHeight: 1.5 }}>
                                                 {aviso}
-                                              </li>
+                                              </span>
                                             ))}
-                                          </ul>
+                                          </div>
                                         </td>
                                       </tr>
                                     ))}
@@ -1652,7 +1490,7 @@ export default function ValidadorEntradasPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       </div>
     </main>
   );
