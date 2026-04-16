@@ -377,7 +377,7 @@ function validarItem(item: Omit<LinhaEntrada,"status"|"avisos">, ehIndustrial=fa
   return {status:"OK", avisos:["Sem inconsistências."]};
 }
 
-function sugerirClass(l: Omit<LinhaEntrada,"classificacao">, ehIndustrial=false): ClassificacaoManual {
+function sugerirClass(l: Omit<LinhaEntrada,"status"|"avisos">, ehIndustrial=false): ClassificacaoManual {
   if (l.sugestao.tipo==="uso_consumo") return "uso_consumo";
   if (l.sugestao.tipo==="imobilizado") return "imobilizado";
   if (l.sugestao.tipo==="combustivel") return "combustivel";
@@ -522,7 +522,7 @@ function parseSped(txt: string): {itens:LinhaEntrada[];empresa:DadosEmpresa|null
         sugestao:{tipo:null,motivo:"",confianca:null} as AnaliseSugestao,
         classificacao:null as ClassificacaoManual, fonte:"c190" as const,
       };
-      const res=validarItem(b,ehInd); itens.push({...b,...res});
+      const res=validarItem(b as Omit<LinhaEntrada,"status"|"avisos">,ehInd); itens.push({...b,...res});
     }
   }
 
@@ -863,7 +863,8 @@ function parseXml(txt: string, perfil: PerfilEmpresa): XmlResult {
           valor_total_nota:vNFtotal,
           base_icms:vBC,aliquota_icms:pICMS,valor_icms:vICMS,
           sugestao,classificacao:null as ClassificacaoManual,fonte:"xml" as const};
-        const cl=sugerirClass(b), res=validarItem(b);
+        const bTyped=b as Omit<LinhaEntrada,"status"|"avisos">;
+        const cl=sugerirClass(bTyped), res=validarItem(bTyped);
         entradas.push({...b,...res,classificacao:cl});
       }
     }
